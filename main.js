@@ -37,7 +37,10 @@ import { LevelLoader } from "./src/LevelLoader.js";
 import { Game } from "./src/Game.js";
 import { ParallaxBackground } from "./src/ParallaxBackground.js";
 import { loadAssets } from "./src/AssetLoader.js";
-import { applyIntegerScale, installResizeHandler } from "./src/utils/IntegerScale.js";
+import {
+  applyIntegerScale,
+  installResizeHandler,
+} from "./src/utils/IntegerScale.js";
 
 import { CameraController } from "./src/CameraController.js";
 import { InputManager } from "./src/InputManager.js";
@@ -61,10 +64,17 @@ function loadJSONAsync(url) {
 // Browsers block audio until a user gesture.
 // We unlock it once and never think about it again.
 let audioUnlocked = false;
+let musicStarted = false;
 function unlockAudioOnce() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   if (typeof userStartAudio === "function") userStartAudio();
+
+  // Start background music (looping) once audio is unlocked.
+  if (!musicStarted && typeof soundManager !== "undefined" && soundManager) {
+    musicStarted = true;
+    soundManager.play("music", { loop: true });
+  }
 }
 
 // Prevent the browser from stealing keys (space/arrows) for scrolling.
@@ -110,6 +120,17 @@ const START_LEVEL_ID = "ex5_level1";
 let bootStarted = false;
 let bootDone = false;
 
+// Helper for async image loading (same as AssetLoader)
+function loadImageAsync(path) {
+  return new Promise((resolve, reject) => {
+    loadImage(
+      path,
+      (img) => resolve(img),
+      (err) => reject(new Error(`Failed to load image "${path}": ${err}`)),
+    );
+  });
+}
+
 // ------------------------------------------------------------
 // Boot pipeline (async) — runs from setup()
 // ------------------------------------------------------------
@@ -130,14 +151,39 @@ async function boot() {
   // (AudioContext may still be locked until the user clicks/presses a key.)
   soundManager = new SoundManager();
 
+  // Load SFX (safe: won't crash if loadSound fails)
+  try {
+    soundManager.load("leaf", "assets/sfx/leafCollect.wav");
+    soundManager.load("jump", "assets/sfx/jump.wav");
+    soundManager.load("hit", "assets/sfx/hitEnemy.wav");
+    soundManager.load("hurt", "assets/sfx/receiveDamage.wav");
+    soundManager.load("die", "assets/sfx/receiveDamage.wav");
+    soundManager.load("win", "assets/sfx/receiveDamage.wav");
+    soundManager.load("music", "assets/sfx/music.wav");
+  } catch (err) {
+    console.warn("Failed to load sound effects:", err);
+  }
+
   // --- Parallax layer defs (VIEW) ---
   const defs = levelPkg.level?.view?.parallax ?? [];
-  parallaxLayers = defs
-    .map((d) => ({
-      img: loadImage(d.img),
-      factor: Number(d.speed ?? 0),
-    }))
-    .filter((l) => l.img);
+  parallaxLayers = (
+    await Promise.all(
+      defs.map(async (d) => {
+        try {
+          return {
+            img: await loadImageAsync(d.img),
+            factor: Number(d.speed ?? 0),
+          };
+        } catch (err) {
+          // Don't fail the entire boot for a single missing background.
+          console.warn(`Parallax failed to load "${d.img}":`, err);
+          return null;
+        }
+      }),
+    )
+  )
+    .filter((l) => l && l.img)
+    .sort((a, b) => Number(a.factor) - Number(b.factor));
 
   // Now that all data is ready, build the WORLD + VIEW runtime.
   initRuntime();

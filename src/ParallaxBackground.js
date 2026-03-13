@@ -20,9 +20,9 @@ export class ParallaxBackground {
    * @param {Object} layers
    * Example:
    * [
-   *   { img: bgFar, factor: 0.2 },
+   *   { img: bgFar, factor: 0.9 },
    *   { img: bgMid, factor: 0.5 },
-   *   { img: bgFore, factor: 0.8 }
+   *   { img: bgFore, factor: 0.2 }
    * ]
    */
   constructor(layers = []) {

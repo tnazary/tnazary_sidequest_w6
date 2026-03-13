@@ -21,10 +21,37 @@ export class SoundManager {
   }
 
   load(name, path) {
-    this.sfx[name] = loadSound(path);
+    // loadSound can throw (e.g. if p5.sound isn't loaded, audio is blocked, or the file is missing).
+    // We keep the game running even when audio fails.
+    try {
+      if (typeof loadSound !== "function") {
+        console.warn(
+          "SoundManager: loadSound() is not available (p5.sound missing)",
+        );
+        return;
+      }
+      this.sfx[name] = loadSound(path);
+    } catch (err) {
+      console.warn(
+        `SoundManager: failed to load '${name}' from '${path}':`,
+        err,
+      );
+      this.sfx[name] = null;
+    }
   }
 
-  play(name) {
-    this.sfx[name]?.play();
+  play(name, opts = {}) {
+    const sound = this.sfx[name];
+    if (!sound) return;
+
+    try {
+      if (opts.loop && typeof sound.loop === "function") {
+        sound.loop();
+        return;
+      }
+      sound.play();
+    } catch (err) {
+      console.warn(`SoundManager: failed to play '${name}':`, err);
+    }
   }
 }

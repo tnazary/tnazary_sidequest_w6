@@ -73,7 +73,7 @@ function unlockAudioOnce() {
   // Start background music (looping) once audio is unlocked.
   if (!musicStarted && typeof soundManager !== "undefined" && soundManager) {
     musicStarted = true;
-    soundManager.play("music", { loop: true });
+    soundManager.startBackgroundMusic();
   }
 }
 

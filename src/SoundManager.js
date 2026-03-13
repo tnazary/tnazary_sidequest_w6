@@ -18,6 +18,7 @@
 export class SoundManager {
   constructor() {
     this.sfx = {};
+    this.backgroundMusic = null;
   }
 
   load(name, path) {
@@ -30,7 +31,11 @@ export class SoundManager {
         );
         return;
       }
-      this.sfx[name] = loadSound(path);
+      const sound = loadSound(path);
+      this.sfx[name] = sound;
+      if (name === "music") {
+        this.backgroundMusic = sound;
+      }
     } catch (err) {
       console.warn(
         `SoundManager: failed to load '${name}' from '${path}':`,
@@ -52,6 +57,19 @@ export class SoundManager {
       sound.play();
     } catch (err) {
       console.warn(`SoundManager: failed to play '${name}':`, err);
+    }
+  }
+
+  startBackgroundMusic() {
+    if (!this.backgroundMusic) return;
+    try {
+      if (typeof this.backgroundMusic.loop === "function") {
+        this.backgroundMusic.loop();
+      } else {
+        this.backgroundMusic.play();
+      }
+    } catch (err) {
+      console.warn("SoundManager: failed to start background music:", err);
     }
   }
 }

@@ -194,11 +194,10 @@ async function loadBackgrounds(levelPkg) {
 
   if (Array.isArray(layers) && layers.length > 0) {
     const bg = {};
-    for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i];
-      // Use a provided key when available, else fall back to a stable index-based key.
-      const key = layer?.key ?? `bg${i}`;
+    for (const layer of layers) {
+      const key = layer?.key;
       const src = layer?.src || layer?.path || layer?.img;
+      if (!key) continue;
 
       // If src is missing, keep it undefined but DON'T crash here;
       // validation will catch it with a clean error.
